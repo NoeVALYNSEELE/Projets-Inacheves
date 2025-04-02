@@ -1,0 +1,161 @@
+import pygame
+import random
+
+# Initialisation de Pygame
+pygame.init()
+
+# Paramètres de la fenêtre
+LARGEUR = 800
+HAUTEUR = 600
+fenetre = pygame.display.set_mode((LARGEUR, HAUTEUR))
+pygame.display.set_caption("Chase IA")
+
+#Constantes
+score = 0
+compteur_carottes = 0
+
+# Renard
+renards = [(0, 0)] #Liste avec les positions des renards
+largeur_ren = 50
+hauteur_ren = 50
+vitesse_ren = 2
+x_ren = 0
+y_ren = 0
+
+# Lapin
+largeur_lap = 50
+hauteur_lap = 50
+vitesse_lap = 5 
+x_lap = 400
+y_lap = 400
+
+#Carotte
+largeur_car = 15
+hauteur_car = 15
+carottes = [
+    pygame.Rect(random.randint(0, LARGEUR - largeur_car), random.randint(0, HAUTEUR - hauteur_car), largeur_car, hauteur_car),
+    pygame.Rect(random.randint(0, LARGEUR - largeur_car), random.randint(0, HAUTEUR - hauteur_car), largeur_car, hauteur_car),
+    pygame.Rect(random.randint(0, LARGEUR - largeur_car), random.randint(0, HAUTEUR - hauteur_car), largeur_car, hauteur_car),
+    pygame.Rect(random.randint(0, LARGEUR - largeur_car), random.randint(0, HAUTEUR - hauteur_car), largeur_car, hauteur_car),
+    pygame.Rect(random.randint(0, LARGEUR - largeur_car), random.randint(0, HAUTEUR - hauteur_car), largeur_car, hauteur_car),
+    pygame.Rect(random.randint(0, LARGEUR - largeur_car), random.randint(0, HAUTEUR - hauteur_car), largeur_car, hauteur_car)
+]
+#print(carottes)
+
+# Couleurs
+NOIR = (0, 0, 0)
+BLANC = (255, 255, 255)
+ORANGE = (255, 128, 0)
+GRIS = (184, 167, 145)
+JAUNE = ( 243, 255, 0)
+PELOUSE = (196, 255, 51)
+ROUGE = (255,0,0)
+
+# Dessin des personnages
+def dessiner_renard(x_ren, y_ren):
+    for x_ren, y_ren in renards:
+        pygame.draw.rect(fenetre, ORANGE, (x_ren, y_ren, largeur_ren, hauteur_ren))
+
+def dessiner_lapin(x_lap, y_lap):
+    pygame.draw.rect(fenetre, GRIS, (x_lap, y_lap, largeur_lap, hauteur_lap))
+
+def dessiner_carotte():
+    for carotte in carottes:
+            pygame.draw.rect(fenetre, ROUGE, carotte)
+
+# Boucle de jeu
+def main():
+    global x_ren, y_ren, x_lap, y_lap, score, compteur_carottes, renards
+    clock = pygame.time.Clock()
+    running = True
+    while running:
+        # Gérer les événements (comme fermer la fenêtre)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        # Déplacement du lapin avec limites
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT] and x_lap > 0:
+            x_lap -= vitesse_lap
+        if keys[pygame.K_RIGHT] and x_lap < LARGEUR - largeur_lap:
+            x_lap += vitesse_lap
+        if keys[pygame.K_UP] and y_lap > 0:
+            y_lap -= vitesse_lap
+        if keys[pygame.K_DOWN] and y_lap < HAUTEUR - hauteur_lap:
+            y_lap += vitesse_lap
+
+        # Déplacement du renard (suivre le lapin)
+        nouveaux_renards = []
+        for x_ren, y_ren in renards:
+        # Chaque renard vise un point légèrement différent autour du lapin
+            cible_x = x_lap + random.randint(-30, 30)  # Décalage aléatoire autour du lapin
+            cible_y = y_lap + random.randint(-30, 30)
+
+            if x_ren > cible_x:
+                x_ren -= vitesse_ren
+            elif x_ren < cible_x:
+                x_ren += vitesse_ren
+            if y_ren > cible_y:
+                y_ren -= vitesse_ren
+            elif y_ren < cible_y:
+                y_ren += vitesse_ren
+            
+            #Facteur de variation
+            x_ren += random.randint(-1, 1)
+            y_ren += random.randint(-1, 1)
+
+            nouveaux_renards.append((x_ren, y_ren))
+        renards = nouveaux_renards #Actualise la position de tous les renards
+
+        #Detection de capture
+        if any(abs(x_ren - x_lap) < largeur_ren and abs(y_ren - y_lap) < hauteur_ren for x_ren, y_ren in renards):
+            #print("Le renard a attrapé le lapin !")
+            x_lap, y_lap = 400, 400  # Réinitialisation
+            x_ren, y_ren = 0, 0
+            score = 0
+            carottes_mangees = 0
+            renards = [(0, 0)]  # On remet un seul renard
+
+        #Détection de collision
+        lapin_rect = pygame.Rect(x_lap, y_lap, largeur_lap, hauteur_lap)
+        for carotte in carottes:
+            if lapin_rect.colliderect(carotte):
+                #print("Carotte mangée !")
+                # Nouvelle position aléatoire
+                carotte.x = random.randint(0, LARGEUR - largeur_car)
+                carotte.y = random.randint(0, HAUTEUR - hauteur_car)
+                score += 1
+                compteur_carottes += 1
+
+        #Spawn des renards
+        if compteur_carottes > 9:
+            compteur_carottes = 0
+            renards.append((0, 0))  # Nouveau renard en (0,0)
+
+        # Peindre le fond de l'écran
+        fenetre.fill(PELOUSE)
+
+        # Dessin
+        dessiner_lapin(x_lap, y_lap)
+        dessiner_renard(x_ren, y_ren)
+        dessiner_carotte()
+
+        #Texte
+        font = pygame.font.Font(None, 36)
+        texte_score = font.render(f"Score : {score}", True, NOIR)
+        fenetre.blit(texte_score, (10, 10))
+
+
+        # Mettre à jour l'affichage
+        pygame.display.update()
+
+        # Limiter le nombre de FPS
+        clock.tick(30)
+
+    # Quitter Pygame
+    pygame.quit()
+
+# Lancer le jeu
+if __name__ == "__main__":
+    main()
